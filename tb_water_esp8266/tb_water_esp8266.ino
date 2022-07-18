@@ -8,36 +8,39 @@
 //  Serial.begin(9600);
 //  while (!Serial);
 //  Serial.print("READY");
+//}
+//
+//float dummy_level = 100.0;
+//void loop() {
+//  String water_level = String(dummy_level, 2);
 //  
-////  if (Serial.find("START")) {
-////    String water_level = Serial.readStringUntil('\n');
-//    String water_level = "12345.00";
-//    String data = getDataString(water_level);
+//  if (setupWifi()) {
+//    String data = getDataString(water_level, WiFi.SSID(), WiFi.RSSI());
 //    espPrintln(String("[data] ") + data);
-//
-//    setupWifi();
-//
+//    
 //    httpPost(tbUrl.c_str(), data);
 //    Serial.println("END");
-////  }
+//  }
 //
-//  ESP.deepSleep(0);
+//  dummy_level += random(10, 100);
+//  delay(15000L);
 //}
 
 void setup() {
   Serial.begin(9600);
   while (!Serial);
   Serial.print("READY");
-  
+
   if (Serial.find("START")) {
     String water_level = Serial.readStringUntil('\n');
-    String data = getDataString(water_level);
-    espPrintln(String("[data] ") + data);
 
-    setupWifi();
-
-    httpPost(tbUrl.c_str(), data);
-    Serial.println("END");
+    if (setupWifi()) {
+      String data = getDataString(water_level, WiFi.SSID(), WiFi.RSSI());
+      espPrintln(String("[data] ") + data);
+      
+      httpPost(tbUrl.c_str(), data);
+      Serial.println("END");
+    }
   }
 
   ESP.deepSleep(0);
@@ -48,9 +51,13 @@ void loop() { }
 // ##############
 // HTTP stuff
 // ##############
-String getDataString(String water_level) {
+String getDataString(String water_level, String ssid, long rssi) {
   String data = "{\"water_level\":";
   data += water_level;
+  data += ",\"ssid\":\"";
+  data += ssid + "\"";
+  data += ",\"rssi\": ";
+  data += rssi;
   return data + "}";
 }
 
@@ -100,7 +107,6 @@ void handleHttpResponse(HTTPClient *http, int httpCode) {
       httpPrintln("payload end:");
     }
   } else {
-    //    Serial.printf("[HTTP] GET... failed, error: %s\n", http->errorToString(httpCode).c_str());
     httpPrintln(String("failed with error: ") + http->errorToString(httpCode));
   }
 
@@ -110,30 +116,40 @@ void handleHttpResponse(HTTPClient *http, int httpCode) {
 // ##############
 // WiFi stuff
 // ##############
-static void setupWifi() {
-  connectWifi();
-  timeSync();
+static bool setupWifi() {
+  bool conn = false;
+  conn = !conn && connectWifi(ssid2, password2, 10000L);
+  conn = !conn && connectWifi(ssid1, password1, 10000L);
+  if (conn) {
+    timeSync();
+  }
+
+  return conn;
 }
 
-void connectWifi() {
+bool connectWifi(const char* ssid, const char* password, unsigned long timeout) {
+  unsigned long now = millis();
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   wifiPrintln(String("connecting to WiFi: ") + ssid);
-  while (WiFi.status() != WL_CONNECTED) {
+  bool conn;
+  while (!(conn = WiFi.status() == WL_CONNECTED) && millis() < now + timeout) {
     delay(100);
   }
 
-  wifiPrintln("connected!");
+  wifiPrintln(conn ? String(ssid) + " connected! " + WiFi.RSSI() : String(ssid) + " timed out...");
+  return conn;
 }
 
 void timeSync() {
+  unsigned long now = millis();
   configTime(0, 0, ntp_primary, ntp_secondary);
   wifiPrintln("waiting on time sync...");
-  while (time(nullptr) < 1510644967) {
+  while (time(nullptr) < 1510644967 && millis() < now + 10000L) {
     delay(10);
   }
 
-  wifiPrintln("synced!");
+  wifiPrintln(time(nullptr) < 1510644967 ? "sync timed out..." : "synced!");
 }
 
 // ##############
