@@ -4,27 +4,37 @@
 #include <time.h>
 #include "config.h";
 //#include "WiFiAutoSelector.h"
+#include "ThingSpeak.h"
 
 #define WIFI_CONNECT_TIMEOUT 10000
 
 const unsigned long wifiTimeout = 5000L;
 const unsigned long timeTimeout = 10000L;
 
+unsigned long tsChannelId = TS_CHANNEL_ID;
+const char * tsWriteApiKey = TS_WRITE_API_KEY;
+
+const char* ssid1 = SSID1
+const char* password1 = PASSWORD1
+
+const char* ssid2 = SSID2
+const char* password2 = PASSWORD2
+
+const char* ssid3 = SSID3
+const char* password3 = PASSWORD3
+
 //WiFiAutoSelector wifiAutoSelector(WIFI_CONNECT_TIMEOUT);
+WiFiClient client;
 
 //void setup() { }
 //void loop() { }
 
 //void setup() {
-////  wifiAutoSelector.add(ssid1, password1);
-////  wifiAutoSelector.add(ssid2, password2);
-////  wifiAutoSelector.add(ssid3, password3);
-//
 //  Serial.begin(9600);
-////  while (!Serial);
+//  while (!Serial);
 //
-//  connectWifi(ssid1, password1, 10000L);
-//  Serial.println("Testing");
+//  WiFi.mode(WIFI_STA);
+//  ThingSpeak.begin(client);
 //}
 //
 //float dummy_level = 100.0;
@@ -32,57 +42,52 @@ const unsigned long timeTimeout = 10000L;
 //  if (connectWifi(ssid1, password1, 10000L)) {
 //    delay(100);
 //
-//    Serial.println("***Success***");
+//    ThingSpeak.setField(1, dummy_level);
+//    ThingSpeak.setField(2, WiFi.SSID());
+//    ThingSpeak.setField(3, WiFi.RSSI());
+//    int httpCode = ThingSpeak.writeFields(tsChannelId, tsWriteApiKey);
+//    if (httpCode == TS_OK_SUCCESS) {
+//      Serial.println("***Success***");
+//    } else {
+//      Serial.println("***Failed*** HTTP error: " + String(httpCode));
+//    }
 //
-//    String water_level = String(dummy_level, 2);
-//    String data = getDataString(water_level);
-//    espPrintln(String("[data] ") + data);
-//
-//    Serial.println(String("free memory: ") + ESP.getFreeHeap());
-//
-//    httpPost(tbUrl, data);
 //    Serial.println("END");
 //
 //  } else {
 //    Serial.println("***Failed***");
 //  }
 //
-////  String water_level = String(dummy_level, 2);
-////
-////  if (setupWifi()) {
-////    String data = getDataString(water_level);
-////    espPrintln(String("[data] ") + data);
-////
-////    httpPost(tbUrl.c_str(), data);
-////    Serial.println("END");
-////  }
-////
 //  dummy_level += random(10, 100);
 //  WiFi.disconnect();
-//  delay(10000L);
+//  delay(15000L);
 //}
 
 void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
+  ThingSpeak.begin(client);
   delay(100);
 
   Serial.begin(9600);
-  Serial.setTimeout(5000);
+  Serial.setTimeout(2000);
   while (!Serial);
   Serial.print("READY");
   delay(10);
 
   if (Serial.find("START")) {
     String water_level_reading = Serial.readStringUntil('\n');
-    double water_level = water_level_reading.toDouble();
+    float water_level = (float)water_level_reading.toDouble();
     if (water_level > 0) {
-      String data = getDataString(String(water_level, 2));
-      espPrintln(String("[data] ") + data);
-
       if (setupWifi()) {
         delay(10);
-        httpPost(tbUrl, data);
+        
+        ThingSpeak.setField(1, water_level);
+        ThingSpeak.setField(2, WiFi.SSID());
+        ThingSpeak.setField(3, WiFi.RSSI());
+        int httpCode = ThingSpeak.writeFields(tsChannelId, tsWriteApiKey);
+        espPrintln(httpCode == TS_OK_SUCCESS ? "success" : "failed: " + String(httpCode));
+        
         Serial.println("END");
       }
     } else {
@@ -207,16 +212,16 @@ bool connectWifi(const char* ssid, const char* password, unsigned long timeout) 
   return conn;
 }
 
-void timeSync() {
-  unsigned long now = millis();
-  configTime(0, 0, ntp_primary, ntp_secondary);
-  wifiPrintln("waiting on time sync...");
-  while (time(nullptr) < 1510644967 && millis() < now + timeTimeout) {
-    delay(10);
-  }
-
-  wifiPrintln(time(nullptr) < 1510644967 ? "sync timed out..." : "synced!");
-}
+//void timeSync() {
+//  unsigned long now = millis();
+//  configTime(0, 0, ntp_primary, ntp_secondary);
+//  wifiPrintln("waiting on time sync...");
+//  while (time(nullptr) < 1510644967 && millis() < now + timeTimeout) {
+//    delay(10);
+//  }
+//
+//  wifiPrintln(time(nullptr) < 1510644967 ? "sync timed out..." : "synced!");
+//}
 
 // ##############
 // String helpers

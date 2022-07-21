@@ -1,11 +1,15 @@
 // TODO: Overwrite with actual values
 
 // ThingsBoard
-const String tbHost = "http://12.345.678.90";
-const String tbAccessToken = "AABBccbCDASDSvV";
-const String tbUrl = tbHost + "/api/v1/" + tbAccessToken + "/telemetry";
+// const String tbHost = "http://12.345.678.90";
+// const String tbAccessToken = "AABBccbCDASDSvV";
+// const String tbUrl = tbHost + "/api/v1/" + tbAccessToken + "/telemetry";
 
 // example http://12.345.678.90/api/v1/AABBccbCDASDSvV/telemetry";
+
+// ThingSpeak
+#define TS_WRITE_API_KEY "AAABBBCCCDDD"
+#define TS_CHANNEL_ID 111222333
 
 // WiFi (TODO: make array/configurable) 
 const char* ssid1 = "WiFi SSID";
@@ -15,5 +19,5 @@ const char* ssid2 = "2nd WiFi SSID";
 const char* password2 = "password";
 
 // Configuration for NTP
-const char* ntp_primary = "time.google.com";
-const char* ntp_secondary = "pool.ntp.org";
+//const char* ntp_primary = "time.google.com";
+//const char* ntp_secondary = "pool.ntp.org";
