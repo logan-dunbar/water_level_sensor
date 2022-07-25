@@ -7,21 +7,22 @@
 #include "ThingSpeak.h"
 
 #define WIFI_CONNECT_TIMEOUT 10000
+#define WIFI_RETRIES 3
 
-const unsigned long wifiTimeout = 5000L;
+const unsigned long wifiTimeout = 15000L;
 const unsigned long timeTimeout = 10000L;
 
 unsigned long tsChannelId = TS_CHANNEL_ID;
 const char * tsWriteApiKey = TS_WRITE_API_KEY;
 
-const char* ssid1 = SSID1
-const char* password1 = PASSWORD1
+const char* ssid1 = SSID1;
+const char* password1 = PASSWORD1;
 
-const char* ssid2 = SSID2
-const char* password2 = PASSWORD2
+const char* ssid2 = SSID2;
+const char* password2 = PASSWORD2;
 
-const char* ssid3 = SSID3
-const char* password3 = PASSWORD3
+const char* ssid3 = SSID3;
+const char* password3 = PASSWORD3;
 
 //WiFiAutoSelector wifiAutoSelector(WIFI_CONNECT_TIMEOUT);
 WiFiClient client;
@@ -77,18 +78,22 @@ void setup() {
 
   if (Serial.find("START")) {
     String water_level_reading = Serial.readStringUntil('\n');
+    //  String water_level_reading = "12345.0";
     float water_level = (float)water_level_reading.toDouble();
     if (water_level > 0) {
       if (setupWifi()) {
         delay(10);
-        
+
+        Serial.println("Sending to ThingSpeak");
         ThingSpeak.setField(1, water_level);
         ThingSpeak.setField(2, WiFi.SSID());
         ThingSpeak.setField(3, WiFi.RSSI());
         int httpCode = ThingSpeak.writeFields(tsChannelId, tsWriteApiKey);
         espPrintln(httpCode == TS_OK_SUCCESS ? "success" : "failed: " + String(httpCode));
-        
+
         Serial.println("END");
+      } else {
+        espPrintln("failed setupWifi()");
       }
     } else {
       espPrintln("no/bad reading received");
@@ -189,8 +194,8 @@ bool setupWifi() {
   //  return true;
 
   bool conn = WiFi.status() == WL_CONNECTED;
-  conn = !conn && connectWifi(ssid2, password2, wifiTimeout);
-  conn = !conn && connectWifi(ssid1, password1, wifiTimeout);
+  conn = conn || connectWifi(ssid2, password2, wifiTimeout);
+//  conn = conn || connectWifi(ssid1, password1, wifiTimeout);
   //  if (conn) {
   //    timeSync();
   //  }
@@ -199,16 +204,24 @@ bool setupWifi() {
 }
 
 bool connectWifi(const char* ssid, const char* password, unsigned long timeout) {
-  unsigned long now = millis();
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  wifiPrintln(String("connecting to WiFi: ") + ssid);
   bool conn;
-  while (!(conn = WiFi.status() == WL_CONNECTED) && millis() < now + timeout) {
-    delay(100);
+  for (int i = 0; i < WIFI_RETRIES; ++i) {
+    unsigned long now = millis();
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+    wifiPrintln(String("connecting to WiFi: ") + ssid);
+
+    while (!(conn = WiFi.status() == WL_CONNECTED) && millis() < now + timeout) {
+      Serial.print(".");
+      delay(100);
+    }
+
+    wifiPrintln(conn ? String(ssid) + " connected! " + WiFi.RSSI() : String(ssid) + " timed out...");
+    if (conn) {
+      break;
+    }
   }
 
-  wifiPrintln(conn ? String(ssid) + " connected! " + WiFi.RSSI() : String(ssid) + " timed out...");
   return conn;
 }
 

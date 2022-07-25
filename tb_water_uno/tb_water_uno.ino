@@ -8,7 +8,7 @@
 #define sensorTrig 11
 #define sensorEcho 10
 
-const unsigned long espTimeout = 20000L;
+const unsigned long espTimeout = 30000L;
 
 static float tankDiameter = 2.480;
 static float tankVolume = 15000;
